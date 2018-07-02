@@ -22,12 +22,15 @@ import {SettingsService} from './lib/SettingsService';
 import {LongPress} from './lib/LongPress';
 
 declare var google;
+declare var require: any;
 
 const CONTAINER_BORDER_POWER_SAVE_OFF = 'none';
 const CONTAINER_BORDER_POWER_SAVE_ON = '7px solid red';
 
 import COLORS from "../../lib/colors";
 import ICON_MAP from "../../lib/icon-map";
+
+import utf8 from "utf8";
 
 // Messages
 const MESSAGE = {
@@ -619,6 +622,90 @@ export class AdvancedPage {
     modal.present();
   }
 
+
+    //Create SAS token for Azure EventHub access
+    createSharedAccessToken(uri, saName, saKey) { 
+      if (!uri || !saName || !saKey) { 
+        throw "Missing required parameter"; 
+      } 
+  
+      var tokenTTLDays = 7;
+  
+      var createHmac = require("create-hmac");
+      var encoded = encodeURIComponent(uri); 
+      var now = new Date(); 
+      var week = 60 * 60 * 24 * tokenTTLDays;
+      var ttl = Math.round(now.getTime() / 1000) + week;
+      var signature = encoded + '\n' + ttl; 
+      var signatureUTF8 = utf8.encode(signature); 
+      var hmac = createHmac("sha256", saKey).update(signatureUTF8).digest("base64");
+  
+      return "SharedAccessSignature sr=" + encoded + "&sig=" + encodeURIComponent(hmac) + "&se=" + ttl + "&skn=" + saName; 
+    }
+  
+    //Send location data to Azure EventHub
+    publishEvent(locationInfo:any) {
+      var serviceNamespace = "switsj-eventhub-dev";
+      var hubName = "switsj-eventhub-dev";
+      var eventHubUrl = "https://" + serviceNamespace + ".servicebus.windows.net";
+      var keyName = "SwitsjEventHubSendListenPolicyDev";
+      var keyValue = "RQhF/JQOLeIxCylIIz1qPUdlfufFxYhsVkz8nm7toxY=";
+      var deviceName = "phone";
+  
+      var sasToken = this.createSharedAccessToken(eventHubUrl, keyName, keyValue);
+  
+      var xmlHttpRequest = new XMLHttpRequest();
+      xmlHttpRequest.open("POST", eventHubUrl + "/" + hubName + "/publishers/" + deviceName + "/messages", true);
+      xmlHttpRequest.setRequestHeader("Content-Type", "application/atom+xml;type=entry;charset=utf-8");
+      xmlHttpRequest.setRequestHeader("Authorization", sasToken);
+  
+      xmlHttpRequest.onreadystatechange = function () {
+        console.log("[event] - xmlHttpRequest.onreadystatechange");
+        console.log("status: " + this.status + ", " + this.statusText);
+  
+        if (this.readyState == 4) {
+          if (this.status == 201)
+            console.log("Success: " + this.response);
+          else
+            console.log(this.response);
+        }
+      };
+  
+      xmlHttpRequest.send(locationInfo);
+    }
+  
+    //Get the location data as JSON string
+    getLocationData(eventName:any) {
+      var locationData: any = {};
+      locationData.currentLocation = this.currentLocationMarker.getPosition().toJSON();
+      locationData.eventName = eventName;
+  
+      var state: any = {};
+      state.activityName = this.state.activityName;
+      state.isMoving = this.state.isMoving;
+      state.isChangingPace = this.state.isChangingPace;
+      state.odometer = this.state.odometer;
+      state.trackingMode = this.state.trackingMode;
+      state.geofenceProximityRadius = this.state.geofenceProximityRadius;
+      state.gpsEnabled = this.state.provider.gps;
+  
+      locationData.state = state;
+  
+      var device: any = {};
+      device.manufacturer = this.device.manufacturer;
+      device.model = this.device.model;
+      device.platform = this.device.platform;
+      device.version = this.device.version;
+      device.serial = this.device.serial;
+      device.uuid = this.device.uuid;
+      device.cordova = this.device.cordova;
+      device.isVirtual = this.device.isVirtual;
+  
+      locationData.device = device;
+  
+      return locationData;
+    }
+
   ////
   // Background Geolocation event-listeners
   //
@@ -638,6 +725,10 @@ export class AdvancedPage {
         this.state.odometer = parseFloat((Math.round((location.odometer/1000)*10)/10).toString()).toFixed(1);
       });
     }
+
+    //Send the location data to EventHub
+    let locationInfo = JSON.stringify(this.getLocationData("onLocation"));
+    this.publishEvent(locationInfo);
   }
   /**
   * @event location failure
@@ -661,6 +752,10 @@ export class AdvancedPage {
       this.state.isChangingPace = false;
       this.state.isMoving = isMoving;
     });
+
+    //Send the location data to EventHub
+    let locationInfo = JSON.stringify(this.getLocationData("onMotionChange"));
+    this.publishEvent(locationInfo);
   }
   /**
   * @event heartbeat
