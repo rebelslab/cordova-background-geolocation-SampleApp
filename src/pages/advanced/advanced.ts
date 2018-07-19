@@ -31,6 +31,7 @@ import COLORS from "../../lib/colors";
 import ICON_MAP from "../../lib/icon-map";
 
 import utf8 from "utf8";
+import CryptoJS from 'crypto-js';
 
 // Messages
 const MESSAGE = {
@@ -642,6 +643,56 @@ export class AdvancedPage {
   
       return "SharedAccessSignature sr=" + encoded + "&sig=" + encodeURIComponent(hmac) + "&se=" + ttl + "&skn=" + saName; 
     }
+
+    createAuthHeaderDb(utcDate:any) {
+      var masterKey = "crhyLffRaEDL8eCvnSMpu3VjpLbNsnrOqMRJ7UtWIP5PX9euxbZFO44ve9XHVkpAKcV4gqTnERxhD4hpq4IObA==";
+
+      var key = CryptoJS.enc.Base64.parse(masterKey);
+
+      var httpVerb = "get";
+      var resourceType = "docs";
+      var resourceId = "dbs/Switsj-DB-Dev/colls/Geofences";
+
+      var signatureText = httpVerb + "\n" + 
+                      resourceType + "\n" +
+                      resourceId + "\n" +
+                      utcDate.toLowerCase() + "\n" +
+                      "\n";
+
+      var hmacSignature = CryptoJS.HmacSHA256(signatureText, key);
+      var base64Bits = CryptoJS.enc.Base64.stringify(hmacSignature);
+      var auth = encodeURIComponent("type=master&ver=1.0&sig=" + base64Bits);
+
+      return auth;
+    }
+
+    getGeofences() {
+      var now = new Date(); 
+      var utcDate = now.toUTCString();
+      var authHeader = this.createAuthHeaderDb(utcDate);
+      var url = "https://switsjstoragedev.documents.azure.com/dbs/Switsj-DB-Dev/colls/Geofences/docs";
+
+      var request = new XMLHttpRequest();
+      request.open("GET", url, true);
+      request.setRequestHeader("Accept", "application/json");
+      request.setRequestHeader("x-ms-version", "2017-02-22");
+      request.setRequestHeader("Authorization", authHeader);
+      request.setRequestHeader("x-ms-date", utcDate);
+
+      request.onreadystatechange = function () {
+        console.log("[event] - getGeofences - xmlHttpRequest.onreadystatechange");
+        console.log("readyState: " + this.readyState + ", status: " + this.status);
+  
+        if (this.readyState == 4) {
+          if (this.status == 200)
+            console.log("Success: " + this.response);
+          else
+            console.log("Error");
+        }
+      };
+
+      request.send();
+    }
   
     //Send location data to Azure EventHub
     publishEvent(locationInfo:any) {
@@ -729,6 +780,8 @@ export class AdvancedPage {
     //Send the location data to EventHub
     let locationInfo = JSON.stringify(this.getLocationData("onLocation"));
     this.publishEvent(locationInfo);
+    
+    this.getGeofences();
   }
   /**
   * @event location failure
@@ -756,6 +809,8 @@ export class AdvancedPage {
     //Send the location data to EventHub
     let locationInfo = JSON.stringify(this.getLocationData("onMotionChange"));
     this.publishEvent(locationInfo);
+
+    this.getGeofences();
   }
   /**
   * @event heartbeat
@@ -821,6 +876,7 @@ export class AdvancedPage {
       // Already added?
       if (circle) { return; }
       this.geofenceMarkers.push(this.buildGeofenceMarker(geofence));
+      this.geofenceHits()
     });
 
   }

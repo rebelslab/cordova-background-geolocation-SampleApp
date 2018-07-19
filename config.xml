@@ -89,7 +89,7 @@
     <plugin name="cordova-plugin-splashscreen" spec="^4.1.0" />
     <plugin name="cordova-plugin-device" spec="^2.0.1" />
     <plugin name="cordova-background-geolocation-lt" spec="^2.12.2">
-        <variable name="LICENSE" value="YOUR_LICENSE_KEY" />
+        <variable name="LICENSE" value="39343a39e899ad79790cf790c9d202ac050764b65a891357439f71c4b47b7ad0" />
         <variable name="GOOGLE_API_VERSION" value="11.8.0" />
         <variable name="APPCOMPAT_VERSION" value="27.0.0" />
         <variable name="BACKGROUND_MODE_LOCATION" value="&lt;string&gt;location&lt;/string&gt;" />
@@ -98,6 +98,7 @@
         <variable name="LOCATION_WHEN_IN_USE_USAGE_DESCRIPTION" value="Background location-tracking is required" />
         <variable name="MOTION_USAGE_DESCRIPTION" value="Using the accelerometer increases battery-efficiency by intelligently toggling location-tracking only when the device is detected to be moving" />
     </plugin>
+    <allow-navigation href="http://10.0.8.110:8100" />
     <engine name="ios" spec="^4.5.4" />
     <engine name="android" spec="7.1.0" />
 </widget>
