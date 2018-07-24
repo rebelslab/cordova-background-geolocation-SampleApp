@@ -644,14 +644,13 @@ export class AdvancedPage {
       return "SharedAccessSignature sr=" + encoded + "&sig=" + encodeURIComponent(hmac) + "&se=" + ttl + "&skn=" + saName; 
     }
 
-    createAuthHeaderDb(utcDate:any) {
+    createAuthHeaderDb(httpVerb:any, collection:any, utcDate:any) {
       var masterKey = "crhyLffRaEDL8eCvnSMpu3VjpLbNsnrOqMRJ7UtWIP5PX9euxbZFO44ve9XHVkpAKcV4gqTnERxhD4hpq4IObA==";
 
       var key = CryptoJS.enc.Base64.parse(masterKey);
 
-      var httpVerb = "get";
       var resourceType = "docs";
-      var resourceId = "dbs/Switsj-DB-Dev/colls/Geofences";
+      var resourceId = "dbs/Switsj-DB-Dev/colls/" + collection;
 
       var signatureText = httpVerb + "\n" + 
                       resourceType + "\n" +
@@ -666,10 +665,117 @@ export class AdvancedPage {
       return auth;
     }
 
+    getBearerToken() {
+      var authUrl = "https://login.microsoftonline.com/switsjauthdev.onmicrosoft.com/oauth2/token";
+      var contentType = "application/x-www-form-urlencoded";
+      var clientId = "eab1e24a-2c26-432b-bafc-8a5334c05617";
+      var clientSecret = "+a/XQaGyzawDTG+/hlbIpuqtzkfJX5shDJ2tIUQSgMM=";
+      var resource = "https://graph.windows.net";
+      var grantType = "client_credentials";
+
+      var request = new XMLHttpRequest();
+      request.open("POST", authUrl, true);
+      request.setRequestHeader("Content-Type", contentType);
+      request.responseType = "json";
+      request.onreadystatechange = function () {
+        console.log("[event] - createBearerToken() - xmlHttpRequest.onreadystatechange");
+        console.log("readyState: " + this.readyState + ", status: " + this.status);
+  
+        if (this.readyState == 4) {
+          if (this.status == 200) {
+            console.log("Success");
+            return this.response.token_type + " " + this.response.access_token;
+          }
+          else {
+            console.log("Error");
+          }
+        }
+      };
+
+      var requestData = "client_id=" + clientId + "&client_secret=" + encodeURIComponent(clientSecret) + "&resource=" + resource + "&grant_type=" + grantType;
+      request.send(requestData);
+    }
+
+    addRewardPoints(deviceId:any, geofenceId:any, pointsScored:any) {
+      var now = new Date(); 
+      var utcDate = now.toUTCString();
+      var authHeader = this.createAuthHeaderDb("post", "RewardPoints", utcDate);
+      var url = "https://switsjstoragedev.documents.azure.com/dbs/Switsj-DB-Dev/colls/RewardPoints/docs";
+
+      var request = new XMLHttpRequest();
+      request.open("POST", url, true);
+      request.setRequestHeader("Accept", "application/json");
+      request.setRequestHeader("x-ms-version", "2017-02-22");
+      request.setRequestHeader("Authorization", authHeader);
+      request.setRequestHeader("x-ms-date", utcDate);
+
+      request.onreadystatechange = function() {
+        console.log("[event] - addRewardPoints - xmlHttpRequest.onreadystatechange");
+        console.log("readyState: " + this.readyState + ", status: " + this.status);
+  
+        if (this.readyState == 4) {
+          if (this.status == 201) {
+            console.log("Success: " + this.response);
+            console.log(this.responseText);
+          }
+          else {
+            console.log("Error");
+            console.log(this.responseText);
+          }
+        }
+      };
+
+      const uuidv4 = require('uuid/v4');
+
+      var rewardPoints: any = {};
+      rewardPoints.id = uuidv4();
+      rewardPoints.deviceId = deviceId;
+      rewardPoints.geofenceId = geofenceId;
+      rewardPoints.points = pointsScored;
+
+      request.send(JSON.stringify(rewardPoints));
+    }
+
+    getRewardPoints(deviceId: any, startTime: any, endTime: any) {
+      var now = new Date(); 
+      var utcDate = now.toUTCString();
+      var authHeader = this.createAuthHeaderDb("post", "RewardPoints", utcDate);
+      var url = "https://switsjstoragedev.documents.azure.com/dbs/Switsj-DB-Dev/colls/RewardPoints/docs";
+
+      var request = new XMLHttpRequest();
+      request.open("POST", url, true);
+      request.setRequestHeader("Accept", "application/json");
+      request.setRequestHeader("Content-Type", "application/query+json");
+      request.setRequestHeader("x-ms-version", "2017-02-22");
+      request.setRequestHeader("Authorization", authHeader);
+      request.setRequestHeader("x-ms-date", utcDate);
+      request.setRequestHeader("x-ms-documentdb-isquery", "true");
+
+      request.onreadystatechange = function() {
+        console.log("[event] - getRewardPoints - xmlHttpRequest.onreadystatechange");
+        console.log("ResponseText = " + this.responseText);
+  
+        if (this.readyState == 4) {
+          if (this.status == 200) {
+            console.log("Success: " + this.response);
+            console.log(this.responseText);
+          }
+          else {
+            console.log("Error");
+          }
+        }
+      };
+
+      var querySpec: any = {};
+      querySpec.query = 'SELECT * FROM RewardPoints rp WHERE rp.deviceId = "' + deviceId + '" AND (rp._ts BETWEEN ' + startTime + ' AND ' + endTime + ')';
+
+      request.send(JSON.stringify(querySpec));
+    }
+
     getGeofences() {
       var now = new Date(); 
       var utcDate = now.toUTCString();
-      var authHeader = this.createAuthHeaderDb(utcDate);
+      var authHeader = this.createAuthHeaderDb("get", "Geofences", utcDate);
       var url = "https://switsjstoragedev.documents.azure.com/dbs/Switsj-DB-Dev/colls/Geofences/docs";
 
       var request = new XMLHttpRequest();
@@ -679,9 +785,8 @@ export class AdvancedPage {
       request.setRequestHeader("Authorization", authHeader);
       request.setRequestHeader("x-ms-date", utcDate);
 
-      request.onreadystatechange = function () {
+      request.onreadystatechange = function() {
         console.log("[event] - getGeofences - xmlHttpRequest.onreadystatechange");
-        console.log("readyState: " + this.readyState + ", status: " + this.status);
   
         if (this.readyState == 4) {
           if (this.status == 200)
@@ -695,7 +800,7 @@ export class AdvancedPage {
     }
   
     //Send location data to Azure EventHub
-    publishEvent(locationInfo:any) {
+    publishEvent(locationInfo: any) {
       var serviceNamespace = "switsj-eventhub-dev";
       var hubName = "switsj-eventhub-dev";
       var eventHubUrl = "https://" + serviceNamespace + ".servicebus.windows.net";
@@ -711,7 +816,7 @@ export class AdvancedPage {
       xmlHttpRequest.setRequestHeader("Authorization", sasToken);
   
       xmlHttpRequest.onreadystatechange = function () {
-        console.log("[event] - xmlHttpRequest.onreadystatechange");
+        console.log("[event] - publishEvent - xmlHttpRequest.onreadystatechange");
         console.log("status: " + this.status + ", " + this.statusText);
   
         if (this.readyState == 4) {
@@ -757,7 +862,8 @@ export class AdvancedPage {
       return locationData;
     }
 
-  ////
+
+    ////
   // Background Geolocation event-listeners
   //
   //
@@ -780,8 +886,17 @@ export class AdvancedPage {
     //Send the location data to EventHub
     let locationInfo = JSON.stringify(this.getLocationData("onLocation"));
     this.publishEvent(locationInfo);
-    
-    this.getGeofences();
+    //console.log(this.getBearerToken());
+    //this.getGeofences();
+
+    this.addRewardPoints(this.device.uuid, "a90a4d22-50a8-4d07-8de7-62429adb9547", "25");
+
+    var now = new Date(); 
+    var week = 60 * 60 * 24 * 7;
+    var startTime = Math.round(now.getTime() / 1000) - week;
+    var endTime = now.getTime();
+
+    this.getRewardPoints(this.device.uuid, startTime, endTime);
   }
   /**
   * @event location failure
@@ -809,8 +924,7 @@ export class AdvancedPage {
     //Send the location data to EventHub
     let locationInfo = JSON.stringify(this.getLocationData("onMotionChange"));
     this.publishEvent(locationInfo);
-
-    this.getGeofences();
+    //this.getGeofences();
   }
   /**
   * @event heartbeat
