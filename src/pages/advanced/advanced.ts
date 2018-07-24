@@ -696,7 +696,7 @@ export class AdvancedPage {
       request.send(requestData);
     }
 
-    addRewardPoints(deviceId:any, geofenceId:any, pointsScored:any) {
+    addRewardPoints(deviceId:any, geofenceId:any, pointsScored:number) {
       var now = new Date(); 
       var utcDate = now.toUTCString();
       var authHeader = this.createAuthHeaderDb("post", "RewardPoints", utcDate);
@@ -753,7 +753,8 @@ export class AdvancedPage {
 
       request.onreadystatechange = function() {
         console.log("[event] - getRewardPoints - xmlHttpRequest.onreadystatechange");
-        console.log("ResponseText = " + this.responseText);
+        console.log("readyState: " + this.readyState + ", status: " + this.status);
+        //console.log("ResponseText = " + this.responseText);
   
         if (this.readyState == 4) {
           if (this.status == 200) {
@@ -767,9 +768,11 @@ export class AdvancedPage {
       };
 
       var querySpec: any = {};
-      querySpec.query = 'SELECT * FROM RewardPoints rp WHERE rp.deviceId = "' + deviceId + '" AND (rp._ts BETWEEN ' + startTime + ' AND ' + endTime + ')';
-
+      querySpec.query = 'SELECT SUM(rp.points) FROM RewardPoints rp WHERE rp.deviceId = "' + deviceId + '" AND (rp._ts BETWEEN ' + startTime + ' AND ' + endTime + ')';
+      
       request.send(JSON.stringify(querySpec));
+
+      console.log("query = " + querySpec.query);
     }
 
     getGeofences() {
@@ -889,7 +892,7 @@ export class AdvancedPage {
     //console.log(this.getBearerToken());
     //this.getGeofences();
 
-    this.addRewardPoints(this.device.uuid, "a90a4d22-50a8-4d07-8de7-62429adb9547", "25");
+    this.addRewardPoints(this.device.uuid, "a90a4d22-50a8-4d07-8de7-62429adb9547", 25);
 
     var now = new Date(); 
     var week = 60 * 60 * 24 * 7;
