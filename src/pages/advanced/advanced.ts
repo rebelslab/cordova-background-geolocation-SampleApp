@@ -645,12 +645,12 @@ export class AdvancedPage {
     }
 
     createAuthHeaderDb(httpVerb:any, collection:any, utcDate:any) {
-      var masterKey = "crhyLffRaEDL8eCvnSMpu3VjpLbNsnrOqMRJ7UtWIP5PX9euxbZFO44ve9XHVkpAKcV4gqTnERxhD4hpq4IObA==";
+      var masterKey = "zl5f1S0UJjEg5oGDhEeo7fAq4h5Exjz6JsSTejBYClsAWISvuJJf3sx7jSEw0DNw3lXT1DR6MZfq0y6gcsUAWQ==";
 
       var key = CryptoJS.enc.Base64.parse(masterKey);
 
       var resourceType = "docs";
-      var resourceId = "dbs/Switsj-DB-Dev/colls/" + collection;
+      var resourceId = "dbs/Switsj-DB-Acc/colls/" + collection;
 
       var signatureText = httpVerb + "\n" + 
                       resourceType + "\n" +
@@ -700,7 +700,7 @@ export class AdvancedPage {
       var now = new Date(); 
       var utcDate = now.toUTCString();
       var authHeader = this.createAuthHeaderDb("post", "RewardPoints", utcDate);
-      var url = "https://switsjstoragedev.documents.azure.com/dbs/Switsj-DB-Dev/colls/RewardPoints/docs";
+      var url = "https://switsjstorageacc.documents.azure.com/dbs/Switsj-DB-Acc/colls/RewardPoints/docs";
 
       var request = new XMLHttpRequest();
       request.open("POST", url, true);
@@ -740,7 +740,7 @@ export class AdvancedPage {
       var now = new Date(); 
       var utcDate = now.toUTCString();
       var authHeader = this.createAuthHeaderDb("post", "RewardPoints", utcDate);
-      var url = "https://switsjstoragedev.documents.azure.com/dbs/Switsj-DB-Dev/colls/RewardPoints/docs";
+      var url = "https://switsjstorageacc.documents.azure.com/dbs/Switsj-DB-Acc/colls/RewardPoints/docs";
 
       var request = new XMLHttpRequest();
       request.open("POST", url, true);
@@ -771,15 +771,13 @@ export class AdvancedPage {
       querySpec.query = 'SELECT SUM(rp.points) FROM RewardPoints rp WHERE rp.deviceId = "' + deviceId + '" AND (rp._ts BETWEEN ' + startTime + ' AND ' + endTime + ')';
       
       request.send(JSON.stringify(querySpec));
-
-      console.log("query = " + querySpec.query);
     }
 
     getGeofences() {
       var now = new Date(); 
       var utcDate = now.toUTCString();
       var authHeader = this.createAuthHeaderDb("get", "Geofences", utcDate);
-      var url = "https://switsjstoragedev.documents.azure.com/dbs/Switsj-DB-Dev/colls/Geofences/docs";
+      var url = "https://switsjstorageacc.documents.azure.com/dbs/Switsj-DB-Acc/colls/Geofences/docs";
 
       var request = new XMLHttpRequest();
       request.open("GET", url, true);
@@ -804,11 +802,11 @@ export class AdvancedPage {
   
     //Send location data to Azure EventHub
     publishEvent(locationInfo: any) {
-      var serviceNamespace = "switsj-eventhub-dev";
-      var hubName = "switsj-eventhub-dev";
+      var serviceNamespace = "switsj-eventhub-acc";
+      var hubName = "switsj-eventhub-acc";
       var eventHubUrl = "https://" + serviceNamespace + ".servicebus.windows.net";
-      var keyName = "SwitsjEventHubSendListenPolicyDev";
-      var keyValue = "RQhF/JQOLeIxCylIIz1qPUdlfufFxYhsVkz8nm7toxY=";
+      var keyName = "SwitsjEventHubSendListenPolicyAcc";
+      var keyValue = "BP7y2W+o2QngJKk2szBvqGyBCiUxuW5Kv5/T+H0RxOA=";
       var deviceName = "phone";
   
       var sasToken = this.createSharedAccessToken(eventHubUrl, keyName, keyValue);
